@@ -37,14 +37,32 @@ async def full_scan(
     async with ClientSession() as session:
         for idx, (url, html) in enumerate(pages, 1):
             logger.info(f"({idx}/{len(pages)}) Scanning: {url}")
+
+            # Извлекаем эндпоинты из HTML
             endpoints = extract_endpoints(html)
+            # Фолбек: если нет эндпоинтов, проверяем GET-параметры URL
+            if not endpoints and url.startswith("http") and '?' in url:
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(url)
+                qs = parse_qs(parsed.query)
+                base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+                endpoints = []
+                for key, vals in qs.items():
+                    endpoints.append({
+                        'type': 'url',
+                        'url': base,
+                        'param': key,
+                        'params': {key: vals[0]}
+                    })
             if not endpoints:
                 continue
 
             for endpoint in endpoints:
-                param_id = (endpoint.get('param')
-                            if endpoint.get('type') == 'link'
-                            else ','.join(endpoint.get('params', {}).keys()))
+                param_id = (
+                    endpoint.get('param')
+                    if endpoint.get('type') == 'link'
+                    else ','.join(endpoint.get('params', {}).keys())
+                )
 
                 if basic:
                     plist = BASIC_PAYLOADS

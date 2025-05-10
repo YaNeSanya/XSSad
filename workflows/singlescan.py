@@ -2,7 +2,6 @@ import os
 import json
 import click
 from aiohttp import ClientSession
-
 from engine.parser import extract_endpoints
 from engine.payloads import generate_payloads, BASIC_PAYLOADS
 from engine.logsetup import get_logger
@@ -24,7 +23,6 @@ async def single_scan(
         f"(basic={basic}, obf={obfuscate}, enc={encode}, waf={detect_waf})"
     )
 
-    # Получаем HTML
     if target_url.startswith("file://"):
         path = target_url[len("file://"):].lstrip('/\\')
         if not os.path.isfile(path):
@@ -45,18 +43,34 @@ async def single_scan(
                 logger.error(f"Cannot fetch page {target_url}: {e}")
                 return results
 
+    # Извлекаем эндпоинты из HTML
     endpoints = extract_endpoints(html)
+    # Фолбек: если не найдены эндпоинты, проверяем GET-параметры URL
+    if not endpoints and target_url.startswith("http") and '?' in target_url:
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(target_url)
+        qs = parse_qs(parsed.query)
+        base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        endpoints = []
+        for key, vals in qs.items():
+            endpoints.append({
+                'type': 'url',
+                'url': base,
+                'param': key,
+                'params': {key: vals[0]}
+            })
     logger.info(f"Found endpoints: {len(endpoints)}")
     if not endpoints:
         return results
 
     async with ClientSession() as session:
         for endpoint in endpoints:
-            param_id = (endpoint.get('param')
-                        if endpoint.get('type') == 'link'
-                        else ','.join(endpoint.get('params', {}).keys()))
+            param_id = (
+                endpoint.get('param')
+                if endpoint.get('type') == 'link'
+                else ','.join(endpoint.get('params', {}).keys())
+            )
 
-            # Выбираем список payloads
             if basic:
                 plist = BASIC_PAYLOADS
             else:
@@ -73,12 +87,8 @@ async def single_scan(
                 )
                 waf_name = detect_waf(resp) if detect_waf else None
 
-                # классификация
                 et = endpoint.get("type")
-                if et == "form":
-                    vtype = "stored"
-                else:
-                    vtype = "reflected"
+                vtype = "stored" if et == "form" else "reflected"
 
                 record = {
                     "url": target_url,
